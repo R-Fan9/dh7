@@ -35,7 +35,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   joinChat(String hashTag, String groupId, String username, String admin) async{
-    await DatabaseMethods(uid: widget.uid).toggleGroupMembership(groupId, username, hashTag);
+    await DatabaseMethods(uid: widget.uid).toggleGroupMembership(groupId, username, hashTag, "joinPublicGC");
     Navigator.push(context, MaterialPageRoute(
         builder: (context) => ConversationScreen(groupId, hashTag, admin, widget.uid)
     ));

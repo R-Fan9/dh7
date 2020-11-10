@@ -5,6 +5,8 @@ import 'package:flutter/cupertino.dart';
 import "package:flutter/material.dart";
 import 'package:intl/intl.dart';
 
+import 'inviteUser.dart';
+
 class ConversationScreen extends StatefulWidget {
   final String groupChatId;
   final String hashTag;
@@ -99,6 +101,18 @@ class _ConversationScreenState extends State<ConversationScreen> {
       backgroundColor: Theme.of(context).primaryColor,
         appBar: AppBar(
           centerTitle: true,
+          actions: [
+            IconButton(
+                icon: widget.admin == widget.uid + "_" + Constants.myName ? Icon(Icons.add): Icon(Icons.more_horiz),
+                iconSize: 30.0,
+                color: Colors.white,
+                onPressed: (){
+                  widget.admin == widget.uid + "_" + Constants.myName ? Navigator.push(context, MaterialPageRoute(
+                      builder: (context) => InviteUserScreen(widget.groupChatId, widget.uid)
+                  )) : null;
+                },
+            )
+          ],
           title: Text(widget.hashTag,
           style: TextStyle(
             fontWeight: FontWeight.bold,

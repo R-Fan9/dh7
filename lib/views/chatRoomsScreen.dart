@@ -4,6 +4,7 @@ import 'package:chat_app/helper/helperFunctions.dart';
 import 'package:chat_app/services/auth.dart';
 import 'package:chat_app/services/database.dart';
 import 'package:chat_app/views/conversation_screen.dart';
+import 'package:chat_app/views/viewInvitation.dart';
 import 'package:chat_app/views/viewJoinRequests.dart';
 import 'package:chat_app/views/createChatRoom.dart';
 import 'package:chat_app/views/search.dart';
@@ -168,7 +169,18 @@ class _ChatRoomState extends State<ChatRoom> {
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
-            heroTag: "ccr",
+            heroTag: "sgi",
+            child: Icon(Icons.group_add),
+            onPressed: (){
+              Navigator.push(context, MaterialPageRoute(
+                  builder: (context) => InvitationScreen(_user.email, _user.uid)
+              ));
+            },
+          ),
+          SizedBox(height: 10,),
+
+          FloatingActionButton(
+            heroTag: "cgc",
             child: Icon(Icons.add),
             onPressed: (){
               Navigator.push(context, MaterialPageRoute(

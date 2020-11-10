@@ -17,7 +17,15 @@ class _JoinRequestsScreenState extends State<JoinRequestsScreen> {
   List<dynamic> listOfRequests;
 
   acceptRequest(String groupId, String username, String hashTag, String userId){
-    DatabaseMethods(uid: userId).toggleGroupMembership(groupId, username, hashTag).then((val) {
+    DatabaseMethods(uid: userId).toggleGroupMembership(groupId, username, hashTag, "acceptRequest").then((val) {
+      setState(() {
+        listOfRequests = val;
+      });
+    });
+  }
+
+  declineRequest(String groupId, String username, String userId){
+    DatabaseMethods(uid: userId).declineJoinRequest(groupId, username).then((val) {
       setState(() {
         listOfRequests = val;
       });
@@ -37,6 +45,20 @@ class _JoinRequestsScreenState extends State<JoinRequestsScreen> {
               ],
             ),
             Spacer(),
+            GestureDetector(
+              onTap: (){
+                declineRequest(groupId, username, userId);
+              },
+              child: Container(
+                  decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(30)
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  child: Icon(Icons.close)
+              ),
+            ),
+            SizedBox(width: 10,),
             GestureDetector(
               onTap: (){
                 acceptRequest(groupId, username, hashTag, userId);
