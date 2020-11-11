@@ -58,6 +58,16 @@ class DatabaseMethods{
 
   }
 
+  deleteConversationMessages(String groupChatId, String messageId){
+    groupChatCollection
+        .doc(groupChatId)
+        .collection("chats")
+        .doc(messageId)
+        .delete();
+    
+    return getConversationMessages(groupChatId);
+  }
+
   addConversationMessages(String groupChatId, String message, String username, String dateTime, int time){
     groupChatCollection
         .doc(groupChatId)
@@ -190,8 +200,25 @@ class DatabaseMethods{
     DocumentSnapshot groupDocSnapshot = await groupDocRef.get();
 
     List<dynamic> joinedGroups = await userDocSnapshot.data()['joinedChats'];
-    List<dynamic> joinRequests = await groupDocSnapshot.data()['joinRequests'];
-    List<dynamic> invites = await groupDocSnapshot.data()['invites'];
+
+    if(actionType != "LeaveGroup"){
+      if(actionType == "acceptRequest"){
+        List<dynamic> joinRequests = await groupDocSnapshot.data()['joinRequests'];
+        if (joinRequests.contains(uid + '_' + username)){
+          await groupDocRef.update({
+            'joinRequests': FieldValue.arrayRemove([uid + '_' + username])
+          });
+        }
+      }
+      if(actionType == "acceptInvite"){
+        List<dynamic> invites = await groupDocSnapshot.data()['invites'];
+        if(invites.contains(userDocSnapshot.data()['email'])){
+          await groupDocRef.update({
+            'invites': FieldValue.arrayRemove([userDocSnapshot.data()['email']])
+          });
+        }
+      }
+    }
 
     if(joinedGroups.contains(groupId + '_' + hashTag)){
       await userDocRef.update({
@@ -202,21 +229,6 @@ class DatabaseMethods{
         'members': FieldValue.arrayRemove([uid + '_' + username])
       });
     }else{
-      if(actionType == "acceptRequest"){
-        if (joinRequests.contains(uid + '_' + username)){
-          await groupDocRef.update({
-            'joinRequests': FieldValue.arrayRemove([uid + '_' + username])
-          });
-        }
-      }
-      if(actionType == "acceptInvite"){
-        if(invites.contains(userDocSnapshot.data()['email'])){
-          await groupDocRef.update({
-            'invites': FieldValue.arrayRemove([userDocSnapshot.data()['email']])
-          });
-        }
-      }
-
       await userDocRef.update({
         'joinedChats': FieldValue.arrayUnion([groupId + '_' + hashTag])
       });

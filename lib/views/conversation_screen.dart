@@ -1,5 +1,6 @@
 import 'package:chat_app/helper/constants.dart';
 import 'package:chat_app/services/database.dart';
+import 'package:chat_app/views/groupChatSettings.dart';
 import 'package:chat_app/widgets/widget.dart';
 import 'package:flutter/cupertino.dart';
 import "package:flutter/material.dart";
@@ -43,7 +44,92 @@ class _ConversationScreenState extends State<ConversationScreen> {
     }
   }
 
-  Widget ChatMessageList(){
+  deleteMessage(String messageId){
+    DatabaseMethods(uid: widget.uid).deleteConversationMessages(widget.groupChatId, messageId).then((val){
+      setState(() {
+        chatMessageStream = val;
+      });
+    });
+  }
+
+  Widget messageTile(message, sendBy, dateTime, userId, isSendByMe, messageId, admin){
+    return GestureDetector(
+      onLongPress: (){
+        isSendByMe ? showMenu(
+            context: context,
+            position: RelativeRect.fromLTRB(0.0, 600.0, 300.0, 0.0),
+            items: <PopupMenuEntry>[
+              PopupMenuItem(
+                value:1,
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete),
+                      Text("Delete")
+                    ],
+                  )),
+            ]).then((value) {
+              if(value == null){
+                return;
+              }else{
+                deleteMessage(messageId);
+              }
+        }) : null;
+      },
+      child: Container(
+        padding: EdgeInsets.only(left: isSendByMe ? 0 : 24, right: isSendByMe ? 24 : 0),
+        margin: EdgeInsets.symmetric(vertical: 10),
+        width: MediaQuery.of(context).size.width,
+        alignment: isSendByMe ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+
+            decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isSendByMe ? [
+                    const Color(0xffff914d),
+                    const Color(0xffff914d)
+                  ]:
+                  [
+                    const Color(0xffe5e7e9),
+                    const Color(0xffe5e7e9),
+                  ],
+                ),
+                borderRadius: isSendByMe ?
+                BorderRadius.only(
+                    topLeft: Radius.circular(23),
+                    topRight: Radius.circular(23),
+                    bottomLeft: Radius.circular(23)
+                ):
+                BorderRadius.only(
+                    topLeft: Radius.circular(23),
+                    topRight: Radius.circular(23),
+                    bottomRight: Radius.circular(23)
+                )
+
+            ),
+            child:Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                !isSendByMe ? Text(userId + "_" + sendBy == admin ? sendBy + " (admin) " : sendBy, style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w300
+                )) : SizedBox.shrink(),
+                Text(message, style:
+                TextStyle(
+                    color: isSendByMe ? Colors.white : Colors.black,
+                    fontSize: 20
+                )
+                ),
+              ],
+            )
+        ),
+      ),
+    );
+  }
+
+
+  Widget chatMessageList(){
     return StreamBuilder(
       stream: chatMessageStream,
       builder: (context, snapshot){
@@ -51,11 +137,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
           reverse: true,
           itemCount: snapshot.data.docs.length,
             itemBuilder: (context, index) {
-            return MessageTile(snapshot.data.docs[index].data()["message"],
+            return messageTile(snapshot.data.docs[index].data()["message"],
             snapshot.data.docs[index].data()["sendBy"],
             snapshot.data.docs[index].data()["formattedDate"],
             snapshot.data.docs[index].data()["userId"],
             snapshot.data.docs[index].data()["sendBy"] == Constants.myName,
+            snapshot.data.docs[index].id,
             widget.admin);
             }) : Container();
       },
@@ -109,7 +196,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 onPressed: (){
                   widget.admin == widget.uid + "_" + Constants.myName ? Navigator.push(context, MaterialPageRoute(
                       builder: (context) => InviteUserScreen(widget.groupChatId, widget.uid)
-                  )) : null;
+                  )) : Navigator.push(context, MaterialPageRoute(
+                      builder: (context) => GroupChatSettingsScreen(widget.groupChatId, widget.uid, widget.hashTag)));
                 },
             )
           ],
@@ -129,7 +217,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                 ),
-                child: ChatMessageList(),
+                child: chatMessageList(),
               ),
             ),
             _buildMessageComposer(),
@@ -137,72 +225,6 @@ class _ConversationScreenState extends State<ConversationScreen> {
         ),
       )
     );
-  }
-}
-
-
-class MessageTile extends StatelessWidget {
-  final bool isSendByMe;
-  final String sendBy;
-  final String message;
-  final String dateTime;
-  final String admin;
-  final String userId;
-  MessageTile(this.message, this.sendBy, this.dateTime, this.userId, this.isSendByMe, this.admin);
-
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-          padding: EdgeInsets.only(left: isSendByMe ? 0 : 24, right: isSendByMe ? 24 : 0),
-          margin: EdgeInsets.symmetric(vertical: 10),
-          width: MediaQuery.of(context).size.width,
-          alignment: isSendByMe ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: isSendByMe ? [
-                  const Color(0xffff914d),
-                  const Color(0xffff914d)
-                ]:
-                    [
-                      const Color(0xffe5e7e9),
-                      const Color(0xffe5e7e9),
-                    ],
-              ),
-              borderRadius: isSendByMe ?
-                  BorderRadius.only(
-                      topLeft: Radius.circular(23),
-                      topRight: Radius.circular(23),
-                      bottomLeft: Radius.circular(23)
-                  ):
-              BorderRadius.only(
-                  topLeft: Radius.circular(23),
-                  topRight: Radius.circular(23),
-                  bottomRight: Radius.circular(23)
-              )
-
-            ),
-            child:Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                !isSendByMe ? Text(userId + "_" + sendBy == admin ? sendBy + " (admin) " : sendBy, style: TextStyle(
-                    color: Colors.black,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w300
-                    )) : SizedBox.shrink(),
-                Text(message, style:
-                    TextStyle(
-                      color: isSendByMe ? Colors.white : Colors.black,
-                      fontSize: 20
-                    )
-                ),
-              ],
-            )
-          ),
-        );
   }
 }
 
