@@ -24,6 +24,7 @@ class _ChatRoomState extends State<ChatRoom> {
 
   User _user;
   Stream myChatsStream;
+  QuerySnapshot myInvitesSnapshot;
 
   Widget myGroupChatList(){
     return StreamBuilder(
@@ -136,6 +137,11 @@ class _ChatRoomState extends State<ChatRoom> {
         myChatsStream = val;
       });
     });
+    DatabaseMethods().checkMyInvites(_user.email).then((val){
+      setState(() {
+        myInvitesSnapshot = val;
+      });
+    });
   }
 
   @override
@@ -168,17 +174,16 @@ class _ChatRoomState extends State<ChatRoom> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          FloatingActionButton(
+          myInvitesSnapshot != null ? myInvitesSnapshot.docs.isNotEmpty ? FloatingActionButton(
             heroTag: "sgi",
             child: Icon(Icons.group_add),
             onPressed: (){
               Navigator.push(context, MaterialPageRoute(
-                  builder: (context) => InvitationScreen(_user.email, _user.uid)
+                  builder: (context) => InvitationScreen(_user.email, _user.uid, myInvitesSnapshot)
               ));
             },
-          ),
+          ) : SizedBox.shrink() : SizedBox.shrink(),
           SizedBox(height: 10,),
-
           FloatingActionButton(
             heroTag: "cgc",
             child: Icon(Icons.add),

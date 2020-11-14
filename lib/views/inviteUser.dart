@@ -50,8 +50,8 @@ class _InviteUserScreenState extends State<InviteUserScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(username, style: simpleTextStyle(),),
-                Text(email, style: simpleTextStyle(),),
+                Text(username, style: TextStyle(color: Theme.of(context).primaryColor)),
+                Text(email, style: TextStyle(color: Theme.of(context).primaryColor),),
               ],
             ),
             Spacer(),
@@ -95,52 +95,54 @@ class _InviteUserScreenState extends State<InviteUserScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: appBarMain(context),
-      body: Container(
-        color: Theme.of(context).primaryColor,
-        child: Column(
-          children: [
-            Container(
-              color: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Row(
-                children: [
-                  Expanded(child: TextField(
-                    controller: emailSearchEditingController,
-                    style: TextStyle(color: Colors.black),
-                    decoration: InputDecoration(
-                      hintText: "search user by email...",
-                        hintStyle: TextStyle(
-                            color: Colors.white54
-                        ),
-                        border: InputBorder.none
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Container(
+          color: Colors.white,
+          child: Column(
+            children: [
+              Container(
+                color: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Row(
+                  children: [
+                    Expanded(child: TextField(
+                      controller: emailSearchEditingController,
+                      style: TextStyle(color: Colors.black),
+                      decoration: InputDecoration(
+                        hintText: "search user by email...",
+                          hintStyle: TextStyle(
+                              color: Colors.white54
+                          ),
+                      ),
+                    )),
+                    SizedBox(width: 15,),
+                    GestureDetector(
+                      onTap: (){
+                        searchUser();
+                      },
+                      child: Container(
+                          height: 40,
+                          width: 40,
+                          decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xfffb934d),
+                                    const Color(0xfffb934d)
+                                  ]
+                              ),
+                              borderRadius: BorderRadius.circular(40)
+                          ),
+                          padding: EdgeInsets.all(12),
+                          child: Image.asset("assets/images/search.png")
+                      ),
                     ),
-                  )),
-                  SizedBox(width: 15,),
-                  GestureDetector(
-                    onTap: (){
-                      searchUser();
-                    },
-                    child: Container(
-                        height: 40,
-                        width: 40,
-                        decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                                colors: [
-                                  const Color(0xfffb934d),
-                                  const Color(0xfffb934d)
-                                ]
-                            ),
-                            borderRadius: BorderRadius.circular(40)
-                        ),
-                        padding: EdgeInsets.all(12),
-                        child: Image.asset("assets/images/search.png")
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Expanded(child: userList()),
-          ],
+              Expanded(child: userList()),
+            ],
+          ),
         ),
       ),
     );

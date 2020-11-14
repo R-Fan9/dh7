@@ -2,6 +2,7 @@ import 'package:chat_app/helper/constants.dart';
 import 'package:chat_app/services/database.dart';
 import 'package:chat_app/views/groupChatSettings.dart';
 import 'package:chat_app/widgets/widget.dart';
+import 'package:dynamic_text_highlighting/dynamic_text_highlighting.dart';
 import 'package:flutter/cupertino.dart';
 import "package:flutter/material.dart";
 import 'package:intl/intl.dart';
@@ -22,6 +23,8 @@ class _ConversationScreenState extends State<ConversationScreen> {
   TextEditingController messageController = new TextEditingController();
 
   Stream chatMessageStream;
+  List<String> highlightWords = [];
+  bool searchKeyWord = false;
 
   @override
   void initState() {
@@ -115,12 +118,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
                     fontSize: 15,
                     fontWeight: FontWeight.w300
                 )) : SizedBox.shrink(),
-                Text(message, style:
-                TextStyle(
-                    color: isSendByMe ? Colors.white : Colors.black,
-                    fontSize: 20
+                DynamicTextHighlighting(
+                  text: message,
+                  highlights: highlightWords,
+                  color: Colors.blue,
+                  style: TextStyle(
+                      color: isSendByMe ? Colors.white : Colors.black,
+                      fontSize: 20
+                  ),
+                  caseSensitive: false,
                 )
-                ),
               ],
             )
         ),
@@ -182,6 +189,55 @@ class _ConversationScreenState extends State<ConversationScreen> {
     );
   }
 
+  Widget searchKeyWordBar(){
+    return Container(
+      color: Theme.of(context).primaryColor,
+      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Row(
+        children: [
+          Container(
+              height: 40,
+              width: 40,
+              decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                      colors: [
+                        const Color(0xfffb934d),
+                        const Color(0xfffb934d)
+                      ]
+                  ),
+                  borderRadius: BorderRadius.circular(40)
+              ),
+              padding: EdgeInsets.all(12),
+              child: Image.asset("assets/images/search.png")
+          ),
+          SizedBox(width: 15,),
+          Expanded(child: TextField(
+            onChanged: (String val){
+              if(val != ""){
+                List<String> newHighlight = [val];
+                setState(() {
+                  highlightWords = newHighlight;
+                });
+              }else{
+                setState(() {
+                  highlightWords = [];
+                });
+              }
+            },
+
+            style: TextStyle(color: Colors.black),
+            decoration: InputDecoration(
+                hintStyle: TextStyle(
+                    color: Colors.white54
+                ),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -189,6 +245,17 @@ class _ConversationScreenState extends State<ConversationScreen> {
         appBar: AppBar(
           centerTitle: true,
           actions: [
+            IconButton(
+              icon: Icon(Icons.search),
+              iconSize: 30.0,
+              color: Colors.white,
+              onPressed: (){
+                setState(() {
+                  searchKeyWord = !searchKeyWord;
+                  highlightWords = [];
+                });
+              },
+            ),
             IconButton(
                 icon: widget.admin == widget.uid + "_" + Constants.myName ? Icon(Icons.add): Icon(Icons.more_horiz),
                 iconSize: 30.0,
@@ -210,8 +277,16 @@ class _ConversationScreenState extends State<ConversationScreen> {
         ),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
+        onDoubleTap: (){
+          setState(() {
+            searchKeyWord = false;
+            highlightWords = [];
+          });
+          FocusScope.of(context).unfocus();
+        },
         child: Column(
           children: [
+            searchKeyWord ? searchKeyWordBar(): Container(),
             Expanded(
               child: Container(
                 decoration: BoxDecoration(

@@ -64,7 +64,7 @@ class DatabaseMethods{
         .collection("chats")
         .doc(messageId)
         .delete();
-    
+
     return getConversationMessages(groupChatId);
   }
 
@@ -94,9 +94,9 @@ class DatabaseMethods{
         .where('members', arrayContains: uid + "_" + username).snapshots();
   }
 
-  getMyInvites(String email) async{
+  checkMyInvites(String email) async{
     return await groupChatCollection
-        .where('invites', arrayContains: email).snapshots();
+        .where('invites', arrayContains: email).get();
   }
 
   getGroupChatById(String groupId) async{
