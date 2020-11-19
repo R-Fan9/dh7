@@ -128,13 +128,13 @@ class _PreviewImageScreenState extends State<PreviewImageScreen> {
                         builder: (context) => CreateChatRoom(widget.uid)
                     ));
                   },
-                  child: Text("Ok")
+                  child: Text("CREATE")
               ),
               FlatButton(
                   onPressed:(){
                     Navigator.of(context).pop();
                   },
-                  child: Text("Cancel")
+                  child: Text("CANCEL")
               )
             ],
           );

@@ -25,6 +25,7 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
 
   Stream groupChatsSnapshot;
+  TextEditingController tagEditingController = new TextEditingController();
 
   getAllChats(){
     DatabaseMethods(uid: widget.uid).getAllGroupChats().then((val){
@@ -57,12 +58,14 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  Future sendImgAndJoin(imgUrl, String hashTag, String groupId, String admin) async{
+  Future sendImgOrJoin(imgUrl, String hashTag, String groupId, String admin, bool myChat) async{
     DateTime now = DateTime.now();
     String formattedDate = DateFormat('kk:mm:a').format(now);
 
     await DatabaseMethods(uid: widget.uid).addConversationMessages(groupId, '', Constants.myName, formattedDate, now.microsecondsSinceEpoch, imgUrl);
-    await DatabaseMethods(uid: widget.uid).toggleGroupMembership(groupId, Constants.myName, hashTag, "JOIN_PUB_GROUP_CHAT");
+    if(!myChat){
+      await DatabaseMethods(uid: widget.uid).toggleGroupMembership(groupId, Constants.myName, hashTag, "JOIN_PUB_GROUP_CHAT");
+    }
     Navigator.of(context).pop();
     Navigator.pushReplacement(context, MaterialPageRoute(
         builder: (context) => ConversationScreen(groupId, hashTag, admin, widget.uid)
@@ -70,7 +73,7 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
 
-  fileUpload(File imgFile, String hashTag, String groupId, String admin){
+  fileUpload(File imgFile, String hashTag, String groupId, String admin, bool myChat){
     String fileName = Path.basename(imgFile.path);
     Reference ref = FirebaseStorage.instance
         .ref()
@@ -78,12 +81,12 @@ class _SearchScreenState extends State<SearchScreen> {
 
     ref.putFile(imgFile).then((value){
       value.ref.getDownloadURL().then((val){
-        sendImgAndJoin(val, hashTag, groupId, admin);
+        sendImgOrJoin(val, hashTag, groupId, admin, myChat);
       });
     });
   }
 
-  Widget searchTile(String hashTag, String groupId, String adminName, String admin, String chatRoomState, List joinRequests){
+  Widget searchTile(bool myChat, String hashTag, String groupId, String adminName, String admin, String chatRoomState, List joinRequests){
     bool requested = joinRequests.contains(widget.uid + '_' + Constants.myName);
 
     return Container(
@@ -106,16 +109,16 @@ class _SearchScreenState extends State<SearchScreen> {
               onTap: (){
                 !requested ?
                 chatRoomState == "public" ? widget.imgFile == null ? joinChat(hashTag, groupId, Constants.myName, admin) :
-                fileUpload(widget.imgFile, hashTag, groupId, admin) :
+                fileUpload(widget.imgFile, hashTag, groupId, admin, myChat) :
                 requestJoin(groupId, Constants.myName) : null;
               },
               child: Container(
                 decoration: BoxDecoration(
-                    color: !requested ? Colors.blue : Colors.grey,
+                    color: !myChat ? !requested ? Colors.blue : Colors.grey : Theme.of(context).primaryColor,
                     borderRadius: BorderRadius.circular(30)
                 ),
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                child: Text(!requested ? chatRoomState == "public" ? "Join" : "Request" : "Requested", style: simpleTextStyle(),),
+                child: Text(!myChat ? !requested ? chatRoomState == "public" ? "Join" : "Request" : "Requested" : "Send", style: simpleTextStyle(),),
               ),
             )
           ],
@@ -137,14 +140,26 @@ class _SearchScreenState extends State<SearchScreen> {
                 itemCount: snapshot.data.docs.length,
                 shrinkWrap: true,
                 itemBuilder: (context, index){
-                  return !snapshot.data.docs[index].data()['members'].contains(widget.uid + '_' + Constants.myName) ? searchTile(
+                  return widget.imgFile == null ? !snapshot.data.docs[index].data()['members'].contains(widget.uid + '_' + Constants.myName) ?
+                  searchTile(
+                      snapshot.data.docs[index].data()['members'].contains(widget.uid + '_' + Constants.myName),
                       snapshot.data.docs[index].data()["hashTag"],
                       snapshot.data.docs[index].data()["groupId"],
                       _destructureName(snapshot.data.docs[index].data()["admin"]),
                       snapshot.data.docs[index].data()["admin"],
                       snapshot.data.docs[index].data()["chatRoomState"],
                       snapshot.data.docs[index].data()["joinRequests"]
-                  ): Container();
+                  ): Container() :
+                  searchTile(
+                      snapshot.data.docs[index].data()['members'].contains(widget.uid + '_' + Constants.myName),
+                      snapshot.data.docs[index].data()["hashTag"],
+                      snapshot.data.docs[index].data()["groupId"],
+                      _destructureName(snapshot.data.docs[index].data()["admin"]),
+                      snapshot.data.docs[index].data()["admin"],
+                      snapshot.data.docs[index].data()["chatRoomState"],
+                      snapshot.data.docs[index].data()["joinRequests"]
+                  )
+                  ;
                 });
           }else{
             return Center(
@@ -164,6 +179,9 @@ class _SearchScreenState extends State<SearchScreen> {
   void initState() {
     // TODO: implement initState
     widget.tag.isEmpty ? getAllChats() : searchChats(widget.tag);
+    if(widget.tag.isNotEmpty){
+      tagEditingController.text = widget.tag;
+    }
     super.initState();
   }
 
@@ -195,7 +213,8 @@ class _SearchScreenState extends State<SearchScreen> {
                       child: Image.asset("assets/images/search.png")
                   ),
                   SizedBox(width: 15,),
-                  Expanded(child: widget.tag.isEmpty ? TextField(
+                  Expanded(child: TextField(
+                    controller: widget.tag.isNotEmpty ? tagEditingController : null,
                     onChanged: (String val){
                       searchChats(val);
                     },
@@ -206,7 +225,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       ),
                       border: InputBorder.none
                     ),
-                  ) : Text(widget.tag, style: TextStyle(color: Colors.black))),
+                  ))
                 ],
               ),
             ),
