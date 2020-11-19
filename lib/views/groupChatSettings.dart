@@ -1,6 +1,7 @@
 import 'package:chat_app/helper/constants.dart';
 import 'package:chat_app/services/database.dart';
 import 'package:chat_app/views/chatRoomsScreen.dart';
+import 'package:chat_app/views/pageView.dart';
 import 'package:chat_app/widgets/widget.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -17,9 +18,11 @@ class GroupChatSettingsScreen extends StatefulWidget {
 class _GroupChatSettingsScreenState extends State<GroupChatSettingsScreen> {
 
   leaveGroupChat(){
-    DatabaseMethods(uid: widget.uid).toggleGroupMembership(widget.groupId, Constants.myName, widget.hashTag, "LeaveGroup");
+    DatabaseMethods(uid: widget.uid).toggleGroupMembership(widget.groupId, Constants.myName, widget.hashTag, "LEAVE_GROUP");
+    Navigator.of(context).pop();
+    Navigator.of(context).pop();
     Navigator.pushReplacement(context, MaterialPageRoute(
-        builder: (context) => ChatRoom()
+        builder: (context) => PageViewScreen(1)
     ));
   }
 

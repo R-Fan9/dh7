@@ -1,10 +1,10 @@
 import 'package:chat_app/helper/helperFunctions.dart';
 import 'package:chat_app/services/auth.dart';
 import 'package:chat_app/services/database.dart';
+import 'package:chat_app/views/camera.dart';
+import 'package:chat_app/views/pageView.dart';
 import 'package:chat_app/widgets/widget.dart';
 import 'package:flutter/material.dart';
-
-import 'chatRoomsScreen.dart';
 
 class SignUp extends StatefulWidget {
   final Function toggle;
@@ -20,6 +20,7 @@ class _SignUpState extends State<SignUp> {
   AuthMethods authMethods = new AuthMethods();
 
   final formKey = GlobalKey<FormState>();
+
   TextEditingController userNameTextEditingController = new TextEditingController();
   TextEditingController emailTextEditingController = new TextEditingController();
   TextEditingController passwordTextEditingController = new TextEditingController();
@@ -44,7 +45,7 @@ class _SignUpState extends State<SignUp> {
         DatabaseMethods(uid: val.uid).uploadUserInfo(userInfoMap);
         HelperFunctions.saveUserLoggedInSharedPreference(true);
         Navigator.pushReplacement(context, MaterialPageRoute(
-              builder: (context) => ChatRoom()
+              builder: (context) => PageViewScreen(0)
             ));
       });
 

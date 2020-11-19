@@ -41,7 +41,6 @@ class DatabaseMethods{
       'createdAt':time,
       'searchKeys':searchKeys,
       'joinRequests':[],
-      'invites':[]
     });
 
     await groupChatDocRef.update({
@@ -68,7 +67,7 @@ class DatabaseMethods{
     return getConversationMessages(groupChatId);
   }
 
-  addConversationMessages(String groupChatId, String message, String username, String dateTime, int time){
+  addConversationMessages(String groupChatId, String message, String username, String dateTime, int time, String imgUrl){
     groupChatCollection
         .doc(groupChatId)
         .collection("chats")
@@ -77,7 +76,8 @@ class DatabaseMethods{
       'sendBy': username,
       'userId': uid,
       'dateTime': dateTime,
-      'time':time
+      'time':time,
+      'imgUrl':imgUrl
     }).catchError((e) {print(e.toString());});
   }
 
@@ -92,11 +92,6 @@ class DatabaseMethods{
   getMyChats(String username) async{
     return await groupChatCollection
         .where('members', arrayContains: uid + "_" + username).snapshots();
-  }
-
-  checkMyInvites(String email) async{
-    return await groupChatCollection
-        .where('invites', arrayContains: email).get();
   }
 
   getGroupChatById(String groupId) async{
@@ -118,6 +113,11 @@ class DatabaseMethods{
         .snapshots();
   }
 
+  tagGroupChats(String searchText) async{
+    return await groupChatCollection.where('searchKeys', arrayContains: searchText )
+        .get();
+  }
+
   getJoinRequests(String groupId) async {
     DocumentReference newGroupDocRef = groupChatCollection.doc(groupId);
     DocumentSnapshot newGroupDocSnapshot = await newGroupDocRef.get();
@@ -125,41 +125,22 @@ class DatabaseMethods{
     return newGroupDocSnapshot.data()['joinRequests'];
   }
 
-  Future<String> isInvitedOrJoined(String groupId, String email) async{
+  Future<String> isJoined(String groupId, String email) async{
     DocumentReference groupDocRef = groupChatCollection.doc(groupId);
     DocumentSnapshot groupDocSnapshot = await groupDocRef.get();
 
     QuerySnapshot userSnapshot = await userCollection.where('email', isEqualTo: email).get();
 
-    List<dynamic> invites = await groupDocSnapshot.data()['invites'];
     List<dynamic> members = await groupDocSnapshot.data()['members'];
     if(userSnapshot.docs.isNotEmpty){
-      if(!members.contains(userSnapshot.docs[0].id + '_' + userSnapshot.docs[0].data()['name'])){
-        if(!invites.contains(email)){
-          return "notInvited";
-        }else {
-          return "Invited";
-        }
-      }else{
+      if(members.contains(userSnapshot.docs[0].id + '_' + userSnapshot.docs[0].data()['name'])){
         return "alreadyJoined";
+      }else{
+        return "notYetJoined";
       }
     }
     return "userDoesNotExist";
 
-  }
-
-  Future sendInvitation(String groupId, String email) async{
-    DocumentReference groupDocRef = groupChatCollection.doc(groupId);
-    DocumentSnapshot groupDocSnapshot = await groupDocRef.get();
-
-    List<dynamic> invites = await groupDocSnapshot.data()['invites'];
-    if(!invites.contains(email)){
-      await groupDocRef.update({
-        'invites': FieldValue.arrayUnion([email])
-      });
-    }
-
-    return isInvitedOrJoined(groupId, email);
   }
 
   Future requestJoinGroup(String groupId, String username) async{
@@ -191,51 +172,54 @@ class DatabaseMethods{
 
   }
 
+  Future joinGroupChat(DocumentReference userDocRef, DocumentReference groupDocRef, String groupId, String hashTag, String username) async {
+    await userDocRef.update({
+      'joinedChats': FieldValue.arrayUnion([groupId + '_' + hashTag])
+    });
+
+    await groupDocRef.update({
+      'members': FieldValue.arrayUnion([uid + '_' + username])
+    });
+  }
+
 
   Future toggleGroupMembership(String groupId, String username, String hashTag, String actionType) async{
     DocumentReference userDocRef = userCollection.doc(uid);
-    DocumentSnapshot userDocSnapshot = await userDocRef.get();
 
     DocumentReference groupDocRef = groupChatCollection.doc(groupId);
-    DocumentSnapshot groupDocSnapshot = await groupDocRef.get();
 
-    List<dynamic> joinedGroups = await userDocSnapshot.data()['joinedChats'];
-
-    if(actionType != "LeaveGroup"){
-      if(actionType == "acceptRequest"){
-        List<dynamic> joinRequests = await groupDocSnapshot.data()['joinRequests'];
-        if (joinRequests.contains(uid + '_' + username)){
-          await groupDocRef.update({
-            'joinRequests': FieldValue.arrayRemove([uid + '_' + username])
-          });
-        }
+    switch(actionType){
+      case "JOIN_PUB_GROUP_CHAT":{
+        joinGroupChat(userDocRef, groupDocRef, groupId, hashTag, username);
       }
-      if(actionType == "acceptInvite"){
-        List<dynamic> invites = await groupDocSnapshot.data()['invites'];
-        if(invites.contains(userDocSnapshot.data()['email'])){
-          await groupDocRef.update({
-            'invites': FieldValue.arrayRemove([userDocSnapshot.data()['email']])
-          });
-        }
+      break;
+      case "LEAVE_GROUP":{
+        await userDocRef.update({
+          'joinedChats': FieldValue.arrayRemove([groupId + '_' + hashTag])
+        });
+        await groupDocRef.update({
+          'members': FieldValue.arrayRemove([uid + '_' + username])
+        });
       }
-    }
+      break;
+      case "ACCEPT_JOIN_REQ":{
+        await groupDocRef.update({
+          'joinRequests': FieldValue.arrayRemove([uid + '_' + username])
+        });
+        joinGroupChat(userDocRef, groupDocRef, groupId, hashTag, username);
+      }
+      break;
+      case "ADD_USER":{
+        joinGroupChat(userDocRef, groupDocRef, groupId, hashTag, username);
+        DocumentSnapshot userDocSnapshot = await userDocRef.get();
+        return isJoined(groupId, userDocSnapshot.data()['email']);
+      }
+      break;
+      default: {
+        print('No such action');
+      }
+      break;
 
-    if(joinedGroups.contains(groupId + '_' + hashTag)){
-      await userDocRef.update({
-        'joinedChats': FieldValue.arrayRemove([groupId + '_' + hashTag])
-      });
-
-      await groupDocRef.update({
-        'members': FieldValue.arrayRemove([uid + '_' + username])
-      });
-    }else{
-      await userDocRef.update({
-        'joinedChats': FieldValue.arrayUnion([groupId + '_' + hashTag])
-      });
-
-      await groupDocRef.update({
-        'members': FieldValue.arrayUnion([uid + '_' + username])
-      });
     }
 
     return getJoinRequests(groupId);

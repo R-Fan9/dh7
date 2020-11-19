@@ -36,9 +36,9 @@ class _CreateChatRoomState extends State<CreateChatRoom> {
         searchKeys.add(temp);
       }
 
-      DatabaseMethods(uid: widget.uid).createChatRoom(hashTag, Constants.myName, chatRoomState, now.microsecondsSinceEpoch, searchKeys).then((groupChatId) {
+      DatabaseMethods(uid: widget.uid).createChatRoom(hashTag.toUpperCase(), Constants.myName, chatRoomState, now.microsecondsSinceEpoch, searchKeys).then((groupChatId) {
         Navigator.pushReplacement(context, MaterialPageRoute(
-            builder: (context) => ConversationScreen(groupChatId, hashTag, widget.uid + "_"+ Constants.myName, widget.uid)
+            builder: (context) => ConversationScreen(groupChatId, hashTag.toUpperCase(), widget.uid + "_"+ Constants.myName, widget.uid)
         ));
       }, onError: (error){
         print(error);
@@ -66,6 +66,7 @@ class _CreateChatRoomState extends State<CreateChatRoom> {
                 child: Column(
                   children: [
                     TextFormField(
+                      textCapitalization: TextCapitalization.characters,
                       style: simpleTextStyle(),
                       controller: hashTagController,
                       decoration: textFieldInputDecoration("#"),

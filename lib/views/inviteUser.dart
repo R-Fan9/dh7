@@ -6,7 +6,8 @@ import 'package:flutter/material.dart';
 class InviteUserScreen extends StatefulWidget {
   final String groupId;
   final String uid;
-  InviteUserScreen(this.groupId, this.uid);
+  final String hashTag;
+  InviteUserScreen(this.groupId, this.uid, this.hashTag);
   @override
   _InviteUserScreenState createState() => _InviteUserScreenState();
 }
@@ -25,7 +26,7 @@ class _InviteUserScreenState extends State<InviteUserScreen> {
           haveUserSearched = true;
         });
       });
-      await DatabaseMethods().isInvitedOrJoined(widget.groupId, emailSearchEditingController.text).then((val) {
+      await DatabaseMethods().isJoined(widget.groupId, emailSearchEditingController.text).then((val) {
         setState(() {
           userState = val;
         });
@@ -33,15 +34,17 @@ class _InviteUserScreenState extends State<InviteUserScreen> {
     }
   }
 
-  sendInvite(String email){
-    DatabaseMethods().sendInvitation(widget.groupId, email).then((val) {
+  addUser(String userId, String username) {
+    DatabaseMethods(uid: userId).toggleGroupMembership(widget.groupId, username, widget.hashTag, "ADD_USER").then((val) {
       setState(() {
         userState = val;
       });
     });
+
   }
 
-  Widget userTile(String username, String email){
+
+  Widget userTile(String username, String email, String userId){
 
     return Container(
         padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -57,15 +60,15 @@ class _InviteUserScreenState extends State<InviteUserScreen> {
             Spacer(),
             GestureDetector(
               onTap: (){
-                userState == "notInvited" ? sendInvite(email) : null;
+                userState == "notYetJoined" ? addUser(userId, username): null;
               },
               child: Container(
                 decoration: BoxDecoration(
-                    color: userState == "alreadyJoined" ? Colors.grey : userState == "Invited" ? Colors.grey : Colors.blue,
+                    color: userState == "alreadyJoined" ? Colors.grey : Colors.blue,
                     borderRadius: BorderRadius.circular(30)
                 ),
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                child: Text(userState == "alreadyJoined" ? "Joined" : userState == "Invited" ? "Invited" : "Invite", style: simpleTextStyle(),),
+                child: Text(userState == "alreadyJoined" ? "Joined" : "Add", style: simpleTextStyle(),),
               ),
             )
           ],
@@ -79,7 +82,8 @@ class _InviteUserScreenState extends State<InviteUserScreen> {
         itemBuilder: (context, index){
         return userTile(
             userSnapshot.docs[index].data()["name"],
-            userSnapshot.docs[index].data()["email"]
+            userSnapshot.docs[index].data()["email"],
+            userSnapshot.docs[index].id
         );
         }) : Container();
 
@@ -110,9 +114,9 @@ class _InviteUserScreenState extends State<InviteUserScreen> {
                       controller: emailSearchEditingController,
                       style: TextStyle(color: Colors.black),
                       decoration: InputDecoration(
-                        hintText: "search user by email...",
+                        hintText: "Search user by email",
                           hintStyle: TextStyle(
-                              color: Colors.white54
+                              color: Colors.black45
                           ),
                       ),
                     )),

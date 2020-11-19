@@ -4,7 +4,6 @@ import 'package:chat_app/helper/helperFunctions.dart';
 import 'package:chat_app/services/auth.dart';
 import 'package:chat_app/services/database.dart';
 import 'package:chat_app/views/conversation_screen.dart';
-import 'package:chat_app/views/viewInvitation.dart';
 import 'package:chat_app/views/viewJoinRequests.dart';
 import 'package:chat_app/views/createChatRoom.dart';
 import 'package:chat_app/views/search.dart';
@@ -14,7 +13,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class ChatRoom extends StatefulWidget {
-
   @override
   _ChatRoomState createState() => _ChatRoomState();
 }
@@ -22,9 +20,7 @@ class ChatRoom extends StatefulWidget {
 class _ChatRoomState extends State<ChatRoom> {
   AuthMethods authMethods = new AuthMethods();
 
-  User _user;
   Stream myChatsStream;
-  QuerySnapshot myInvitesSnapshot;
 
   Widget myGroupChatList(){
     return StreamBuilder(
@@ -56,7 +52,7 @@ class _ChatRoomState extends State<ChatRoom> {
     return GestureDetector(
       onTap: (){
         Navigator.push(context, MaterialPageRoute(
-            builder: (context) => ConversationScreen(groupId, hashTag, admin, _user.uid)));
+            builder: (context) => ConversationScreen(groupId, hashTag, admin, Constants.myUserId)));
       },
       child: Container(
         color: Colors.black26,
@@ -76,7 +72,7 @@ class _ChatRoomState extends State<ChatRoom> {
             SizedBox(width: 8,),
             Text(hashTag, style: simpleTextStyle(),),
             SizedBox(width: 8,),
-            admin == _user.uid + '_' + Constants.myName ? Container(
+            admin == Constants.myUserId + '_' + Constants.myName ? Container(
               width: 10,
               height: 10,
               alignment: Alignment.center,
@@ -86,7 +82,7 @@ class _ChatRoomState extends State<ChatRoom> {
               ),
             ) : SizedBox.shrink(),
             Spacer(),
-            numOfRequests > 0 ? admin == _user.uid + '_' + Constants.myName ? GestureDetector(
+            numOfRequests > 0 ? admin == Constants.myUserId + '_' + Constants.myName ? GestureDetector(
               onTap: (){
                 Navigator.push(context, MaterialPageRoute(
                     builder: (context) => JoinRequestsScreen(joinRequestsList, groupId, hashTag)
@@ -111,7 +107,7 @@ class _ChatRoomState extends State<ChatRoom> {
   @override
   void initState() {
     // TODO: implement initState
-    getUseInfo();
+    getGroupChats();
     super.initState();
   }
 
@@ -128,18 +124,11 @@ class _ChatRoomState extends State<ChatRoom> {
     );
   }
 
-  getUseInfo() async {
-    _user = await FirebaseAuth.instance.currentUser;
-    Constants.myName = await HelperFunctions.getUserNameInSharedPreference();
-    DatabaseMethods(uid: _user.uid).getMyChats(Constants.myName)
+  getGroupChats() async {
+    DatabaseMethods(uid: Constants.myUserId).getMyChats(Constants.myName)
         .then((val) {
       setState(() {
         myChatsStream = val;
-      });
-    });
-    DatabaseMethods().checkMyInvites(_user.email).then((val){
-      setState(() {
-        myInvitesSnapshot = val;
       });
     });
   }
@@ -174,22 +163,13 @@ class _ChatRoomState extends State<ChatRoom> {
       floatingActionButton: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          myInvitesSnapshot != null ? myInvitesSnapshot.docs.isNotEmpty ? FloatingActionButton(
-            heroTag: "sgi",
-            child: Icon(Icons.group_add),
-            onPressed: (){
-              Navigator.push(context, MaterialPageRoute(
-                  builder: (context) => InvitationScreen(_user.email, _user.uid, myInvitesSnapshot)
-              ));
-            },
-          ) : SizedBox.shrink() : SizedBox.shrink(),
           SizedBox(height: 10,),
           FloatingActionButton(
             heroTag: "cgc",
             child: Icon(Icons.add),
             onPressed: (){
               Navigator.push(context, MaterialPageRoute(
-                  builder: (context) => CreateChatRoom(_user.uid)
+                  builder: (context) => CreateChatRoom(Constants.myUserId)
               ));
             },
           ),
@@ -199,7 +179,7 @@ class _ChatRoomState extends State<ChatRoom> {
             child: Icon(Icons.search),
             onPressed: (){
               Navigator.push(context, MaterialPageRoute(
-                  builder: (context) => SearchScreen(_user.uid)
+                  builder: (context) => SearchScreen(Constants.myUserId, "", null)
               ));
             },
           ),

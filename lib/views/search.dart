@@ -1,15 +1,23 @@
+import 'dart:io';
+
 import 'package:chat_app/helper/constants.dart';
 import 'package:chat_app/helper/helperFunctions.dart';
 import 'package:chat_app/services/database.dart';
 import 'package:chat_app/views/conversation_screen.dart';
 import 'package:chat_app/widgets/widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:path/path.dart'as Path;
+
 
 class SearchScreen extends StatefulWidget {
   final String uid;
-  SearchScreen(this.uid);
+  final String tag;
+  final File imgFile;
+  SearchScreen(this.uid, this.tag, this.imgFile);
   @override
   _SearchScreenState createState() => _SearchScreenState();
 }
@@ -35,8 +43,8 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   joinChat(String hashTag, String groupId, String username, String admin) async{
-    await DatabaseMethods(uid: widget.uid).toggleGroupMembership(groupId, username, hashTag, "joinPublicGC");
-    Navigator.push(context, MaterialPageRoute(
+    await DatabaseMethods(uid: widget.uid).toggleGroupMembership(groupId, username, hashTag, "JOIN_PUB_GROUP_CHAT");
+    Navigator.pushReplacement(context, MaterialPageRoute(
         builder: (context) => ConversationScreen(groupId, hashTag, admin, widget.uid)
     ));
   }
@@ -45,6 +53,32 @@ class _SearchScreenState extends State<SearchScreen> {
     DatabaseMethods(uid: widget.uid).requestJoinGroup(groupId, username).then((val) {
       setState(() {
         groupChatsSnapshot = val;
+      });
+    });
+  }
+
+  Future sendImgAndJoin(imgUrl, String hashTag, String groupId, String admin) async{
+    DateTime now = DateTime.now();
+    String formattedDate = DateFormat('kk:mm:a').format(now);
+
+    await DatabaseMethods(uid: widget.uid).addConversationMessages(groupId, '', Constants.myName, formattedDate, now.microsecondsSinceEpoch, imgUrl);
+    await DatabaseMethods(uid: widget.uid).toggleGroupMembership(groupId, Constants.myName, hashTag, "JOIN_PUB_GROUP_CHAT");
+    Navigator.of(context).pop();
+    Navigator.pushReplacement(context, MaterialPageRoute(
+        builder: (context) => ConversationScreen(groupId, hashTag, admin, widget.uid)
+    ));
+  }
+
+
+  fileUpload(File imgFile, String hashTag, String groupId, String admin){
+    String fileName = Path.basename(imgFile.path);
+    Reference ref = FirebaseStorage.instance
+        .ref()
+        .child('chats/${widget.uid}_${Constants.myName}/$fileName');
+
+    ref.putFile(imgFile).then((value){
+      value.ref.getDownloadURL().then((val){
+        sendImgAndJoin(val, hashTag, groupId, admin);
       });
     });
   }
@@ -71,7 +105,8 @@ class _SearchScreenState extends State<SearchScreen> {
             GestureDetector(
               onTap: (){
                 !requested ?
-                chatRoomState == "public" ? joinChat(hashTag, groupId, Constants.myName, admin) :
+                chatRoomState == "public" ? widget.imgFile == null ? joinChat(hashTag, groupId, Constants.myName, admin) :
+                fileUpload(widget.imgFile, hashTag, groupId, admin) :
                 requestJoin(groupId, Constants.myName) : null;
               },
               child: Container(
@@ -128,7 +163,7 @@ class _SearchScreenState extends State<SearchScreen> {
   @override
   void initState() {
     // TODO: implement initState
-    getAllChats();
+    widget.tag.isEmpty ? getAllChats() : searchChats(widget.tag);
     super.initState();
   }
 
@@ -160,7 +195,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       child: Image.asset("assets/images/search.png")
                   ),
                   SizedBox(width: 15,),
-                  Expanded(child: TextField(
+                  Expanded(child: widget.tag.isEmpty ? TextField(
                     onChanged: (String val){
                       searchChats(val);
                     },
@@ -171,7 +206,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       ),
                       border: InputBorder.none
                     ),
-                  )),
+                  ) : Text(widget.tag, style: TextStyle(color: Colors.black))),
                 ],
               ),
             ),

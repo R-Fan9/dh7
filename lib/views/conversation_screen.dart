@@ -1,11 +1,17 @@
+import 'dart:io';
+
 import 'package:chat_app/helper/constants.dart';
 import 'package:chat_app/services/database.dart';
+import 'package:chat_app/views/camera.dart';
 import 'package:chat_app/views/groupChatSettings.dart';
 import 'package:chat_app/widgets/widget.dart';
 import 'package:dynamic_text_highlighting/dynamic_text_highlighting.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import "package:flutter/material.dart";
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:path/path.dart'as Path;
 
 import 'inviteUser.dart';
 
@@ -15,6 +21,7 @@ class ConversationScreen extends StatefulWidget {
   final String admin;
   final String uid;
   ConversationScreen(this.groupChatId, this.hashTag, this.admin, this.uid);
+
   @override
   _ConversationScreenState createState() => _ConversationScreenState();
 }
@@ -36,13 +43,12 @@ class _ConversationScreenState extends State<ConversationScreen> {
     super.initState();
   }
 
-
   sendMessage(){
     if(messageController.text.isNotEmpty){
       DateTime now = DateTime.now();
       String formattedDate = DateFormat('kk:mm:a').format(now);
 
-      DatabaseMethods(uid: widget.uid).addConversationMessages(widget.groupChatId, messageController.text, Constants.myName, formattedDate, now.microsecondsSinceEpoch);
+      DatabaseMethods(uid: widget.uid).addConversationMessages(widget.groupChatId, messageController.text, Constants.myName, formattedDate, now.microsecondsSinceEpoch, '');
       messageController.text = "";
     }
   }
@@ -55,7 +61,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
     });
   }
 
-  Widget messageTile(message, sendBy, dateTime, userId, isSendByMe, messageId, admin){
+  Widget messageTile(message, imgUrl, sendBy, dateTime, userId, isSendByMe, messageId, admin){
     return GestureDetector(
       onLongPress: (){
         isSendByMe ? showMenu(
@@ -79,7 +85,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         }) : null;
       },
       child: Container(
-        padding: EdgeInsets.only(left: isSendByMe ? 0 : 24, right: isSendByMe ? 24 : 0),
+        padding: EdgeInsets.only(left: isSendByMe ? 24 : 8, right: isSendByMe ? 8 : 24),
         margin: EdgeInsets.symmetric(vertical: 10),
         width: MediaQuery.of(context).size.width,
         alignment: isSendByMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -113,12 +119,26 @@ class _ConversationScreenState extends State<ConversationScreen> {
             child:Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                !isSendByMe ? Text(userId + "_" + sendBy == admin ? sendBy + " (admin) " : sendBy, style: TextStyle(
-                    color: Colors.black,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w300
-                )) : SizedBox.shrink(),
-                DynamicTextHighlighting(
+                !isSendByMe ? Row(
+                  children: [
+                    Text(sendBy, style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w300
+                    )),
+                    SizedBox(width: 4,),
+                    userId + "_" + sendBy == admin ? Container(
+                      width: 10,
+                      height: 10,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Theme.of(context).primaryColor
+                      ),
+                    ):SizedBox.shrink()
+                  ],
+                ) : SizedBox.shrink(),
+                message != '' ? DynamicTextHighlighting(
                   text: message,
                   highlights: highlightWords,
                   color: Colors.blue,
@@ -127,6 +147,20 @@ class _ConversationScreenState extends State<ConversationScreen> {
                       fontSize: 20
                   ),
                   caseSensitive: false,
+                ) : Card(
+                    child: Column(
+                      children: [
+                        Container(
+                          child: AspectRatio(
+                            aspectRatio: 16 / 9,
+                            child: Image.network(
+                              imgUrl,
+                              fit: BoxFit.cover
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
                 )
               ],
             )
@@ -145,6 +179,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
           itemCount: snapshot.data.docs.length,
             itemBuilder: (context, index) {
             return messageTile(snapshot.data.docs[index].data()["message"],
+            snapshot.data.docs[index].data()["imgUrl"],
             snapshot.data.docs[index].data()["sendBy"],
             snapshot.data.docs[index].data()["formattedDate"],
             snapshot.data.docs[index].data()["userId"],
@@ -154,6 +189,41 @@ class _ConversationScreenState extends State<ConversationScreen> {
             }) : Container();
       },
     );
+  }
+
+  Future getImage() async {
+    var pickedImage = await ImagePicker().getImage(source: ImageSource.gallery);
+
+    if(pickedImage != null){
+      return File(pickedImage.path);
+    }else{
+      return null;
+    }
+
+  }
+
+  sendImage(String imgUrl) {
+    DateTime now = DateTime.now();
+    String formattedDate = DateFormat('kk:mm:a').format(now);
+
+    DatabaseMethods(uid: widget.uid).addConversationMessages(widget.groupChatId, '', Constants.myName, formattedDate, now.microsecondsSinceEpoch, imgUrl);
+  }
+
+  Future uploadImage() async {
+    final File imgFile = await getImage();
+    if(imgFile != null){
+      String fileName = Path.basename(imgFile.path);
+      Reference ref = FirebaseStorage.instance
+          .ref()
+          .child('chats/${widget.uid}_${Constants.myName}/$fileName');
+
+      ref.putFile(imgFile).then((value){
+        value.ref.getDownloadURL().then((val){
+          sendImage(val);
+        });
+      });
+    }
+
   }
 
   _buildMessageComposer(){
@@ -167,7 +237,9 @@ class _ConversationScreenState extends State<ConversationScreen> {
               icon: Icon(Icons.photo),
             iconSize: 25.0,
             color: Theme.of(context).primaryColor,
-            onPressed: () {},
+            onPressed: () {
+                uploadImage();
+            },
           ),
           Expanded(child: TextField(
             controller: messageController,
@@ -262,7 +334,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
                 color: Colors.white,
                 onPressed: (){
                   widget.admin == widget.uid + "_" + Constants.myName ? Navigator.push(context, MaterialPageRoute(
-                      builder: (context) => InviteUserScreen(widget.groupChatId, widget.uid)
+                      builder: (context) => InviteUserScreen(widget.groupChatId, widget.uid, widget.hashTag)
                   )) : Navigator.push(context, MaterialPageRoute(
                       builder: (context) => GroupChatSettingsScreen(widget.groupChatId, widget.uid, widget.hashTag)));
                 },
@@ -286,7 +358,7 @@ class _ConversationScreenState extends State<ConversationScreen> {
         },
         child: Column(
           children: [
-            searchKeyWord ? searchKeyWordBar(): Container(),
+            searchKeyWord ? searchKeyWordBar(): SizedBox.shrink(),
             Expanded(
               child: Container(
                 decoration: BoxDecoration(

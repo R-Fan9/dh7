@@ -1,6 +1,8 @@
 import 'package:chat_app/helper/helperFunctions.dart';
 import 'package:chat_app/services/auth.dart';
 import 'package:chat_app/services/database.dart';
+import 'package:chat_app/views/camera.dart';
+import 'package:chat_app/views/pageView.dart';
 import 'package:chat_app/widgets/widget.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/cupertino.dart';
@@ -48,7 +50,7 @@ class _SignInState extends State<SignIn> {
           );
 
           Navigator.pushReplacement(context, MaterialPageRoute(
-              builder: (context) => ChatRoom()));
+              builder: (context) => PageViewScreen(0)));
         } else {
           setState(() {
             isLoading = false;

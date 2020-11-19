@@ -1,11 +1,15 @@
+import 'package:camera/camera.dart';
+import 'package:chat_app/services/camera.dart';
 import 'package:flutter/material.dart';
 
+// App Bar Widget
 Widget appBarMain(BuildContext context){
   return AppBar(
     title: Image.asset("assets/images/spidr_logo.jpg", height: 50,),
   );
 }
 
+// Input Field Widget
 InputDecoration textFieldInputDecoration(String hintText){
   return InputDecoration(
       hintText: hintText,
@@ -21,6 +25,8 @@ InputDecoration textFieldInputDecoration(String hintText){
   );
 }
 
+
+// Simple Text Widget
 TextStyle simpleTextStyle(){
   return TextStyle(
     color: Colors.white,

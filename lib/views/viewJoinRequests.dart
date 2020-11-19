@@ -17,7 +17,7 @@ class _JoinRequestsScreenState extends State<JoinRequestsScreen> {
   List<dynamic> listOfRequests;
 
   acceptRequest(String groupId, String username, String hashTag, String userId){
-    DatabaseMethods(uid: userId).toggleGroupMembership(groupId, username, hashTag, "acceptRequest").then((val) {
+    DatabaseMethods(uid: userId).toggleGroupMembership(groupId, username, hashTag, "ACCEPT_JOIN_REQ").then((val) {
       setState(() {
         listOfRequests = val;
       });
