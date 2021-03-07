@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:agora_rtc_engine/rtc_engine.dart';
+import 'package:chat_app/database.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -19,12 +22,20 @@ class IndexState extends State<IndexPage> {
   bool _validateError = false;
 
   ClientRole _role = ClientRole.Broadcaster;
+  QuerySnapshot onCallUsers;
 
   @override
   void dispose() {
     // dispose input controller
     _channelController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    // TODO: implement initState
+
+    super.initState();
   }
 
   @override
@@ -39,50 +50,6 @@ class IndexState extends State<IndexPage> {
           height: 400,
           child: Column(
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                      child: TextField(
-                    controller: _channelController,
-                    decoration: InputDecoration(
-                      errorText:
-                          _validateError ? 'Channel name is mandatory' : null,
-                      border: UnderlineInputBorder(
-                        borderSide: BorderSide(width: 1),
-                      ),
-                      hintText: 'Channel name',
-                    ),
-                  ))
-                ],
-              ),
-              Column(
-                children: [
-                  ListTile(
-                    title: Text(ClientRole.Broadcaster.toString()),
-                    leading: Radio(
-                      value: ClientRole.Broadcaster,
-                      groupValue: _role,
-                      onChanged: (ClientRole value) {
-                        setState(() {
-                          _role = value;
-                        });
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    title: Text(ClientRole.Audience.toString()),
-                    leading: Radio(
-                      value: ClientRole.Audience,
-                      groupValue: _role,
-                      onChanged: (ClientRole value) {
-                        setState(() {
-                          _role = value;
-                        });
-                      },
-                    ),
-                  )
-                ],
-              ),
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Row(
@@ -107,26 +74,32 @@ class IndexState extends State<IndexPage> {
 
   Future<void> onJoin() async {
     // update input validation
-    setState(() {
-      _channelController.text.isEmpty
-          ? _validateError = true
-          : _validateError = false;
-    });
-    if (_channelController.text.isNotEmpty) {
-      // await for camera and mic permissions before pushing video page
-      await _handleCameraAndMic(Permission.camera);
-      await _handleCameraAndMic(Permission.microphone);
-      // push video page with given channel name
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => CallPage(
-            channelName: _channelController.text,
-            role: _role,
-          ),
-        ),
-      );
+    String name;
+
+    onCallUsers = await DatabaseMethods().getOnCallUsers();
+    if(onCallUsers.docs.length == 0){
+      var rng = new Random();
+      name = "${rng.nextInt(10000)}";
+      DatabaseMethods().addOnCallUser(name);
+    }else{
+      name = onCallUsers.docs[0].data()['name'];
+      DatabaseMethods().removeOnCallUser(onCallUsers.docs[0].id);
     }
+
+    // await for camera and mic permissions before pushing video page
+    await _handleCameraAndMic(Permission.camera);
+    await _handleCameraAndMic(Permission.microphone);
+    // push video page with given channel name
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CallPage(
+          channelName: name,
+          role: _role,
+        ),
+      ),
+    );
+
   }
 
   Future<void> _handleCameraAndMic(Permission permission) async {
